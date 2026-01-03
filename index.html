@@ -1,12 +1,575 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Mi Primera Web</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollito Charlatán con Música Chiptune</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        :root {
+            --lcd-bg-day: #a3b18a;
+            --lcd-bg-night: #344e41;
+        }
+
+        body {
+            background-color: #e9edc9;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .tamagotchi-case {
+            width: 320px;
+            height: 420px;
+            background: #ffb703;
+            border-radius: 50% 50% 40% 40%;
+            position: relative;
+            box-shadow: inset -8px -8px 0px rgba(0,0,0,0.1), 8px 8px 20px rgba(0,0,0,0.15);
+            border: 10px solid #fb8500;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 40px;
+        }
+
+        .screen-border {
+            width: 220px;
+            height: 190px;
+            background: #023047;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            background: var(--lcd-bg-day);
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 8px;
+            transition: all 0.5s;
+        }
+
+        .screen.night {
+            background: var(--lcd-bg-night);
+            filter: brightness(0.8);
+        }
+
+        .sprite-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        #petSprite {
+            font-size: 64px;
+            transition: transform 0.2s, filter 0.3s, opacity 0.5s;
+            z-index: 5;
+        }
+
+        /* Burbuja de Mensaje */
+        .bubble {
+            position: absolute;
+            top: 5px;
+            background: white;
+            border: 2px solid #023047;
+            padding: 4px;
+            border-radius: 6px;
+            font-size: 6px;
+            max-width: 120px;
+            text-align: center;
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s;
+            z-index: 20;
+            color: #023047;
+        }
+
+        .bubble.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px 6px 0;
+            border-style: solid;
+            border-color: white transparent transparent;
+        }
+
+        /* Efectos Visuales */
+        .effect {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            font-size: 20px;
+            z-index: 10;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+
+        .soul-effect {
+            position: absolute;
+            font-size: 40px;
+            pointer-events: none;
+            animation: soulAscend 3s forwards linear;
+            z-index: 15;
+        }
+
+        @keyframes soulAscend {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            20% { opacity: 0.8; }
+            100% { transform: translateY(-150px) rotate(20deg); opacity: 0; }
+        }
+
+        .bounce { animation: bounce 0.5s infinite alternate; }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+
+        .shake { animation: shake 0.2s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px); }
+            50% { transform: translate(-1px, -1px); }
+            100% { transform: translate(1px, -1px); }
+        }
+
+        /* Barras de Estado */
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 6px;
+        }
+
+        .bar {
+            flex-grow: 1;
+            height: 6px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .fill {
+            height: 100%;
+            background: #023047;
+            width: 50%;
+            transition: width 0.3s;
+        }
+
+        .fill.danger {
+            background: #e63946;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        /* Botones */
+        .buttons {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            width: 45px;
+            height: 45px;
+            background: #219ebc;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 4px 0 #023047;
+            cursor: pointer;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #023047;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 30;
+            font-size: 10px;
+            border-radius: 8px;
+        }
+
+        #musicToggle {
+            cursor: pointer;
+            font-size: 10px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
-    <h1>¡Hola Mundo desde GitHub Pages!</h1>
-    <p>He logrado subir mi primer proyecto a la red.</p>
-    <p>Gracias a Gemini.</p>
-</body>
 
+    <div class="tamagotchi-case">
+        <div class="screen-border">
+            <div class="screen" id="gameScreen">
+                <div class="flex justify-between items-center text-[8px] opacity-60">
+                    <span id="stageLabel">HUEVO</span>
+                    <span id="musicToggle" onclick="toggleMusic()">🔇</span>
+                    <span id="timeIcon">☀️</span>
+                </div>
+
+                <div class="sprite-container" id="spriteContainer">
+                    <div id="msgBubble" class="bubble">¡Hola!</div>
+                    <div id="petSprite" class="bounce">🥚</div>
+                </div>
+
+                <div class="stats-container">
+                    <div class="stat-row">🍔 <div class="bar"><div id="h-fill" class="fill"></div></div></div>
+                    <div class="stat-row">🎾 <div class="bar"><div id="f-fill" class="fill"></div></div></div>
+                    <div class="stat-row">💤 <div class="bar"><div id="s-fill" class="fill"></div></div></div>
+                </div>
+
+                <div id="deathOverlay" class="overlay">
+                    <p class="mb-4">EL ALMA DEL POLLITO<br>HA ASCENDIDO...</p>
+                    <button onclick="resetGame()" class="bg-white text-black px-2 py-1">NUEVO HUEVO</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn" onclick="action('feed')" title="Comer"></button>
+            <button class="btn" onclick="action('play')" title="Jugar"></button>
+            <button class="btn" onclick="action('sleep')" title="Dormir"></button>
+        </div>
+
+        <div class="mt-8 text-[8px] text-[#023047] flex gap-4">
+            <span>COMER</span>
+            <span>JUGAR</span>
+            <span>DORMIR</span>
+        </div>
+    </div>
+
+    <script>
+        const sprite = document.getElementById('petSprite');
+        const screen = document.getElementById('gameScreen');
+        const container = document.getElementById('spriteContainer');
+        const bubble = document.getElementById('msgBubble');
+
+        // --- SISTEMA DE AUDIO ---
+        let audioCtx;
+        let isMusicPlaying = false;
+        let musicStep = 0;
+        let musicInterval;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playNote(freq, type, duration, volume) {
+            if (!audioCtx || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function runMusicLoop() {
+            if (!isMusicPlaying || pet.isDead) return;
+            const melody = [261.63, 329.63, 392.00, 329.63, 440.00, 392.00, 329.63, 293.66];
+            const bass = [130.81, 164.81, 196.00, 164.81];
+            playNote(melody[musicStep % melody.length], 'square', 0.2, 0.02);
+            if (musicStep % 2 === 0) {
+                playNote(bass[(musicStep / 2) % bass.length], 'triangle', 0.4, 0.03);
+            }
+            musicStep++;
+        }
+
+        function toggleMusic() {
+            initAudio();
+            isMusicPlaying = !isMusicPlaying;
+            document.getElementById('musicToggle').innerText = isMusicPlaying ? '🔊' : '🔇';
+            if (isMusicPlaying) {
+                if (musicInterval) clearInterval(musicInterval);
+                musicInterval = setInterval(runMusicLoop, 250);
+            } else {
+                clearInterval(musicInterval);
+            }
+        }
+
+        const sounds = {
+            feed: () => { playNote(600, 'sine', 0.2, 0.1); setTimeout(() => playNote(800, 'sine', 0.2, 0.1), 100); },
+            play: () => { playNote(400, 'square', 0.1, 0.05); setTimeout(() => playNote(600, 'square', 0.1, 0.05), 50); },
+            sleep: () => { playNote(200, 'triangle', 0.5, 0.1); },
+            alert: () => {
+                playNote(1200, 'sine', 0.1, 0.03);
+                setTimeout(() => playNote(1200, 'sine', 0.1, 0.03), 150);
+            },
+            evolve: () => {
+                const notes = [440, 554, 659, 880];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => playNote(freq, 'square', 0.4, 0.06), i * 150);
+                });
+            },
+            death: () => {
+                const notes = [440, 330, 220, 110];
+                notes.forEach((freq, i) => {
+                    setTimeout(() => playNote(freq, 'sawtooth', 0.6, 0.05), i * 300);
+                });
+            }
+        };
+
+        // --- LÓGICA DEL JUEGO Y MENSAJES ---
+        let pet = {
+            hunger: 100,
+            happy: 100,
+            energy: 100,
+            stage: 'egg',
+            ticks: 0,
+            isNight: false,
+            isDead: false,
+            lastAlert: 0
+        };
+
+        const messages = {
+            healthy: ["¡Pío! Qué día", "¡Soy genial!", "¡Mira mi baile!", "¡Me siento top!", "¡Soy feliz!", "¡Hola mundo!"],
+            hungry: ["¡Comidaaaa!", "Tengo hambre...", "¿Hay pizza?", "Tengo un hueco", "Pan, por favor", "¡Ñam ñam!"],
+            sad: ["¡Aburrido!", "¡Juguemos!", "¿Y la pelota?", "Dame amor", "¡Oye, mírame!", "¡A jugar!"],
+            tired: ["Qué sueño...", "Bostezo pío", "Cero pilas", "Quiero cama", "Modo ahorro", "Zzz... casi"],
+            night: ["Zzz pío zzz", "Sueño con maíz", "No molestar", "Buenas noches", "Zzzzzzz", "Mañana más"]
+        };
+
+        function showSpeechBubble() {
+            if (pet.isDead) {
+                bubble.classList.remove('active');
+                return;
+            }
+
+            let category = 'healthy';
+            if (pet.isNight) category = 'night';
+            else if (pet.hunger <= 40) category = 'hungry';
+            else if (pet.happy <= 40) category = 'sad';
+            else if (pet.energy <= 40) category = 'tired';
+
+            const list = messages[category];
+            const randomMsg = list[Math.floor(Math.random() * list.length)];
+            
+            bubble.innerText = randomMsg;
+            bubble.classList.add('active');
+            
+            setTimeout(() => {
+                bubble.classList.remove('active');
+            }, 3000);
+        }
+
+        const sprites = {
+            egg: '🥚',
+            baby: '🐣',
+            child: '🐥',
+            adult: '🐔',
+            dead: '😵',
+            soul: '👻'
+        };
+
+        function createEffect(emoji) {
+            const el = document.createElement('div');
+            el.className = 'effect';
+            el.innerText = emoji;
+            el.style.left = (Math.random() * 60 + 20) + '%';
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function triggerDeathAnimation() {
+            bubble.classList.remove('active');
+            sprite.innerText = sprites.dead;
+            sprite.classList.remove('bounce');
+            sprite.style.opacity = '0.5';
+            sounds.death();
+
+            const soul = document.createElement('div');
+            soul.className = 'soul-effect';
+            soul.innerText = sprites.soul;
+            container.appendChild(soul);
+
+            setTimeout(() => {
+                document.getElementById('deathOverlay').style.display = 'flex';
+            }, 3000);
+        }
+
+        function updateUI() {
+            if (pet.isDead) return;
+            sprite.innerText = sprites[pet.stage];
+            
+            const bars = [
+                {id: 'h-fill', val: pet.hunger},
+                {id: 'f-fill', val: pet.happy},
+                {id: 's-fill', val: pet.energy}
+            ];
+
+            bars.forEach(bar => {
+                const el = document.getElementById(bar.id);
+                el.style.width = bar.val + '%';
+                el.classList.toggle('danger', bar.val <= 25);
+            });
+
+            document.getElementById('stageLabel').innerText = pet.stage.toUpperCase();
+            document.getElementById('timeIcon').innerText = pet.isNight ? '🌙' : '☀️';
+            screen.classList.toggle('night', pet.isNight);
+            if(pet.isNight) sprite.innerText = '😴';
+        }
+
+        function action(type) {
+            initAudio();
+            if (pet.isDead) return;
+
+            if (type === 'feed' && !pet.isNight) {
+                pet.hunger = Math.min(100, pet.hunger + 25);
+                sounds.feed();
+                createEffect('🌽');
+                bubble.innerText = "¡DELICIOSO!";
+                bubble.classList.add('active');
+                setTimeout(() => bubble.classList.remove('active'), 1500);
+            } 
+            else if (type === 'play' && !pet.isNight) {
+                if (pet.energy < 15) {
+                    bubble.innerText = "NO PUEDO...";
+                    bubble.classList.add('active');
+                    setTimeout(() => bubble.classList.remove('active'), 1500);
+                    return;
+                }
+                pet.happy = Math.min(100, pet.happy + 30);
+                pet.energy = Math.max(0, pet.energy - 20);
+                sounds.play();
+                createEffect('🎾');
+                bubble.innerText = "¡WIII!";
+                bubble.classList.add('active');
+                setTimeout(() => bubble.classList.remove('active'), 1500);
+            }
+            else if (type === 'sleep') {
+                pet.isNight = !pet.isNight;
+                sounds.sleep();
+                if (pet.isNight) {
+                    createEffect('💤');
+                    bubble.innerText = "BUENAS...";
+                    bubble.classList.add('active');
+                    setTimeout(() => bubble.classList.remove('active'), 1500);
+                } else {
+                    bubble.innerText = "¡DÍA!";
+                    bubble.classList.add('active');
+                    setTimeout(() => bubble.classList.remove('active'), 1500);
+                }
+            }
+            updateUI();
+        }
+
+        function checkEvolution() {
+            let oldStage = pet.stage;
+            if (pet.stage === 'egg' && pet.ticks > 10) pet.stage = 'baby';
+            else if (pet.stage === 'baby' && pet.ticks > 40) pet.stage = 'child';
+            else if (pet.stage === 'child' && pet.ticks > 100) pet.stage = 'adult';
+
+            if (oldStage !== pet.stage) {
+                sounds.evolve();
+                createEffect('🎊');
+                bubble.innerText = "¡SOY NUEVO!";
+                bubble.classList.add('active');
+                setTimeout(() => bubble.classList.remove('active'), 2000);
+                sprite.animate([{ transform: 'scale(1)' }, { transform: 'scale(2)' }, { transform: 'scale(1)' }], { duration: 800 });
+            }
+        }
+
+        function resetGame() {
+            pet = { hunger: 100, happy: 100, energy: 100, stage: 'egg', ticks: 0, isNight: false, isDead: false, lastAlert: 0 };
+            document.getElementById('deathOverlay').style.display = 'none';
+            sprite.style.opacity = '1';
+            sprite.classList.add('bounce');
+            document.querySelectorAll('.soul-effect').forEach(s => s.remove());
+            updateUI();
+        }
+
+        // Bucle de ticks (estado)
+        setInterval(() => {
+            if (pet.isDead) return;
+            pet.ticks++;
+
+            if (pet.isNight) {
+                pet.energy = Math.min(100, pet.energy + 8);
+                pet.hunger -= 1;
+            } else {
+                pet.hunger -= 3;
+                pet.happy -= 4;
+                pet.energy -= 2;
+            }
+
+            // Mostrar mensaje aleatorio cada ciertos ticks
+            if (pet.ticks % 4 === 0) {
+                showSpeechBubble();
+            }
+
+            if ((pet.hunger <= 25 || pet.happy <= 25 || pet.energy <= 25) && pet.ticks > pet.lastAlert + 4) {
+                sounds.alert();
+                pet.lastAlert = pet.ticks;
+                sprite.parentElement.classList.add('shake');
+                setTimeout(() => sprite.parentElement.classList.remove('shake'), 500);
+            }
+
+            checkEvolution();
+
+            if (pet.hunger <= 0 || pet.happy <= 0 || pet.energy <= 0) {
+                pet.isDead = true;
+                triggerDeathAnimation();
+            }
+            updateUI();
+        }, 2000);
+
+        updateUI();
+    </script>
+</body>
 </html>
+
